@@ -81,7 +81,7 @@ class Conditional_WooCommerce_Variations {
             'conditional-variations',
             plugin_dir_url(__FILE__) . 'assets/js/conditional-variations.js',
             array('jquery'),
-            '1.0.5',
+            '1.0.8',
             true
         );
     }
