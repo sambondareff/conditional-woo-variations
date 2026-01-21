@@ -3,6 +3,7 @@ jQuery(function ($) {
 
   let $genre, $size, $sizeRow;
   let allSizeOptions = [];
+  let allGenreOptions = []; // Store original genre options from the product
   let isUpdating = false;
 
   function init() {
@@ -21,14 +22,31 @@ jQuery(function ($) {
       return /size/i.test(name) && !/genre|gender/i.test(name);
     }).first();
 
-    if (!$genre.length || !$size.length) return;
+    // Skip if no gender attribute (product doesn't need conditional logic)
+    if (!$genre.length) return;
+    
+    // If size doesn't exist, also skip
+    if (!$size.length) return;
 
     $sizeRow = $size.closest('tr').length ? $size.closest('tr') : $size.closest('div');
+
+    // Always place Size under Gender
+    enforceOrder();
 
     // Store all size options only once
     if (allSizeOptions.length === 0) {
       $size.find('option').each(function() {
         allSizeOptions.push({
+          value: $(this).val(),
+          text: $(this).text()
+        });
+      });
+    }
+    
+    // Store original genre options from the product (only available genders)
+    if (allGenreOptions.length === 0) {
+      $genre.find('option').each(function() {
+        allGenreOptions.push({
           value: $(this).val(),
           text: $(this).text()
         });
@@ -62,6 +80,8 @@ jQuery(function ($) {
     $form.off('woocommerce_update_variation_values.cv').on('woocommerce_update_variation_values.cv', function() {
       setTimeout(function() {
         restoreGenreOptions();
+        enforceOrder();
+        sortSizeDropdown();
       }, 50);
     });
 
@@ -69,22 +89,22 @@ jQuery(function ($) {
   }
 
   function restoreGenreOptions() {
-    // Ensure all genre options remain available
+    // Ensure genre options remain available based on what the product actually has
     const currentGenre = $genre.val();
-    const allGenreOptions = ['', 'Male', 'Female', 'Child'];
-    
-    // Check if options were filtered by WooCommerce
     const existingOptions = $genre.find('option').length;
     
-    if (existingOptions < 4) {
-      // Rebuild genre dropdown with all options
+    // Only restore if WooCommerce has filtered options
+    if (existingOptions < allGenreOptions.length) {
       const selectedValue = $genre.val();
       $genre.empty();
       
-      $genre.append('<option value="">Choose an option</option>');
-      $genre.append('<option value="Male">Male</option>');
-      $genre.append('<option value="Female">Female</option>');
-      $genre.append('<option value="Child">Children</option>');
+      // Restore the original genre options for this product
+      allGenreOptions.forEach(function(opt) {
+        const $option = $('<option></option>');
+        $option.val(opt.value);
+        $option.text(opt.text);
+        $genre.append($option);
+      });
       
       if (selectedValue) {
         $genre.val(selectedValue);
@@ -93,41 +113,27 @@ jQuery(function ($) {
   }
 
   function getSizeOrder(slug) {
-    // Define custom sort order
-    const order = {
-      // Male sizes
-      'male-s': 1,
-      'male-m': 2,
-      'male-l': 3,
-      'male-xl': 4,
-      'male-xxl': 5,
-      'male-3xl': 6,
-      'male-5xl': 7,
-      
-      // Female sizes
-      'female-6': 10,
-      'female-8': 11,
-      'female-10': 12,
-      'female-12': 13,
-      'female-14': 14,
-      'female-16': 15,
-      'female-18': 16,
-      'female-20': 17,
-      'female-22': 18,
-      'female-24': 19,
-      'female-26': 20,
-      
-      // Children sizes
-      'child-4': 30,
-      'child-6': 31,
-      'child-8': 32,
-      'child-10': 33,
-      'child-12': 34,
-      'child-14': 35,
-      'child-16': 36
-    };
+    if (!slug) return 999;
+    const s = String(slug).toLowerCase();
     
-    return order[slug.toLowerCase()] || 999;
+    // Kids numeric sizes: sort by number
+    if (s.startsWith('kids-')) {
+      const m = s.match(/^kids-(\d{1,2})$/);
+      if (m) return 100 + parseInt(m[1], 10); // 108, 110, 112, 114 ...
+      return 199;
+    }
+
+    // Adult sizes: normalize synonyms and order XS < S < M < L < XL < XXL/2XL < 3XL/XXXL < 4XL/XXXXL < 5XL/XXXXXL
+    const part = s.replace(/^(unisex-|mens-|womens-)/, '');
+    const base = { xs: 1, s: 2, m: 3, l: 4, xl: 5 };
+    if (base[part] !== undefined) return base[part];
+    if (/^(?:xxl|2xl)$/.test(part)) return 6;
+    if (/^(?:xxxl|3xl)$/.test(part)) return 7;
+    if (/^(?:xxxxl|4xl)$/.test(part)) return 8;
+    if (/^(?:xxxxxl|5xl)$/.test(part)) return 9;
+
+    // Unknowns sink to bottom
+    return 999;
   }
 
   function updateSizeOptions() {
@@ -145,12 +151,14 @@ jQuery(function ($) {
 
     // Determine prefix based on genre
     let prefix = '';
-    if (genre.includes('male') && !genre.includes('female')) {
-      prefix = 'male-';
-    } else if (genre.includes('female')) {
-      prefix = 'female-';
-    } else if (genre.includes('child')) {
-      prefix = 'child-';
+    if (genre.includes('unisex')) {
+      prefix = 'unisex-';
+    } else if (genre.includes('mens') || genre.includes('men')) {
+      prefix = 'mens-';
+    } else if (genre.includes('womens') || genre.includes('women')) {
+      prefix = 'womens-';
+    } else if (genre.includes('kids') || genre.includes('kid')) {
+      prefix = 'kids-';
     }
 
     // Reset size selection when genre changes
@@ -180,6 +188,9 @@ jQuery(function ($) {
         $size.append($option);
       }
     });
+
+    // As a safeguard, ensure consistent ordering after Woo updates
+    sortSizeDropdown();
     
     // Force re-render
     $size[0].dispatchEvent(new Event('change', { bubbles: true }));
@@ -196,6 +207,25 @@ jQuery(function ($) {
     }, 100);
   }
   
+  function enforceOrder() {
+    if (!$genre || !$genre.length || !$sizeRow || !$sizeRow.length) return;
+    const $genreRow = $genre.closest('tr').length ? $genre.closest('tr') : $genre.closest('div');
+    if (!$genreRow.length) return;
+    // If size appears before gender, move it after gender
+    const sameParent = $genreRow.parent()[0] === $sizeRow.parent()[0];
+    if (sameParent) {
+      // Only move if size is not already after
+      const genreIndex = $genreRow.index();
+      const sizeIndex = $sizeRow.index();
+      if (sizeIndex < genreIndex || $sizeRow.prev()[0] !== $genreRow[0]) {
+        $sizeRow.insertAfter($genreRow);
+      }
+    } else {
+      // Fallback: just insert after genre row
+      $sizeRow.insertAfter($genreRow);
+    }
+  }
+
   function sortSizeDropdown() {
     // Get all current options except first (Choose an option)
     const $options = $size.find('option:not(:first)');
@@ -220,4 +250,8 @@ jQuery(function ($) {
   $(document).on('woocommerce_variation_form', function() {
     setTimeout(init, 100);
   });
+
+  // Re-enforce order on repeated init attempts
+  setTimeout(enforceOrder, 200);
+  setTimeout(enforceOrder, 500);
 });

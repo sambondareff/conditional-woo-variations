@@ -3,7 +3,7 @@
  * Plugin Name: Conditional WooCommerce Variations
  * Plugin URI: https://yoursite.com
  * Description: Show conditional size dropdowns based on genre selection
- * Version: 1.0.5
+ * Version: 1.1.0
  * Author: Your Name
  * Author URI: https://yoursite.com
  * License: GPL v2 or later
@@ -35,6 +35,8 @@ class Conditional_WooCommerce_Variations {
         add_action('admin_notices', array($this, 'check_woocommerce'));
         add_action('before_woocommerce_init', array($this, 'declare_compatibility'));
         add_filter('woocommerce_ajax_variation_threshold', array($this, 'increase_variation_limit'), 10, 2);
+        add_filter('woocommerce_admin_meta_boxes_variations_per_page', array($this, 'increase_variations_per_page'));
+        add_filter('woocommerce_ajax_add_variations_batch_size', array($this, 'increase_variation_batch_size'));
         
         // Add cleanup button to product variations
         add_action('woocommerce_variable_product_before_variations', array($this, 'add_cleanup_button'));
@@ -48,10 +50,13 @@ class Conditional_WooCommerce_Variations {
         }
         ?>
         <style type="text/css">
-            .variations select[name*="size"]:not([name*="gender"]):not([name*="genre"]) {
+            /* Only hide size dropdown if gender/genre attribute exists */
+            .variations:has(select[name*="gender"]) select[name*="size"]:not([name*="gender"]),
+            .variations:has(select[name*="genre"]) select[name*="size"]:not([name*="genre"]) {
                 visibility: hidden;
             }
-            .variations tr:has(select[name*="size"]:not([name*="gender"]):not([name*="genre"])) {
+            .variations:has(select[name*="gender"]) tr:has(select[name*="size"]:not([name*="gender"])),
+            .variations:has(select[name*="genre"]) tr:has(select[name*="size"]:not([name*="genre"])) {
                 display: none;
             }
         </style>
@@ -67,6 +72,20 @@ class Conditional_WooCommerce_Variations {
     
     public function increase_variation_limit($limit, $product) {
         return 500;
+    }
+    
+    /**
+     * Increase variations per page in admin (default is 15)
+     */
+    public function increase_variations_per_page() {
+        return 100;
+    }
+    
+    /**
+     * Increase variation generation batch size (default is 50)
+     */
+    public function increase_variation_batch_size($batch_size) {
+        return 100;
     }
     
     public function check_woocommerce() {
@@ -86,7 +105,7 @@ class Conditional_WooCommerce_Variations {
             'conditional-variations',
             plugin_dir_url(__FILE__) . 'assets/js/conditional-variations.js',
             array('jquery'),
-            '1.0.8',
+            '1.1.0',
             true
         );
     }
@@ -102,7 +121,7 @@ class Conditional_WooCommerce_Variations {
         echo '<strong>Conditional Variations:</strong> ';
         echo '<button type="button" class="button cv-cleanup-variations" data-product-id="' . esc_attr($post->ID) . '">Clean Up Invalid Variations</button>';
         echo '<span class="cv-cleanup-result" style="margin-left: 10px;"></span>';
-        echo '<p style="margin: 5px 0 0 0; color: #646970; font-size: 12px;">This will remove variations where Gender and Size don\'t match (e.g., Male + female-6)</p>';
+        echo '<p style="margin: 5px 0 0 0; color: #646970; font-size: 12px;">This will remove variations where Gender and Size don\'t match (e.g., Men\'s + womens-xs)</p>';
         echo '</div>';
     }
     
@@ -204,15 +223,18 @@ class Conditional_WooCommerce_Variations {
             $should_delete = false;
             
             // Check for invalid combinations
-            if ($gender_lower === 'male' && !preg_match('/^male-/', $size_lower)) {
+            if ($gender_lower === 'unisex' && !preg_match('/^unisex-/', $size_lower)) {
                 $should_delete = true;
-                $debug_info[] = "  -> INVALID: Male with '{$size}'";
-            } elseif ($gender_lower === 'female' && !preg_match('/^female-/', $size_lower)) {
+                $debug_info[] = "  -> INVALID: Unisex with '{$size}'";
+            } elseif (($gender_lower === 'mens' || $gender_lower === "men's") && !preg_match('/^mens-/', $size_lower)) {
                 $should_delete = true;
-                $debug_info[] = "  -> INVALID: Female with '{$size}'";
-            } elseif (($gender_lower === 'children' || $gender_lower === 'child') && !preg_match('/^child-/', $size_lower)) {
+                $debug_info[] = "  -> INVALID: Men's with '{$size}'";
+            } elseif (($gender_lower === 'womens' || $gender_lower === "women's") && !preg_match('/^womens-/', $size_lower)) {
                 $should_delete = true;
-                $debug_info[] = "  -> INVALID: Children with '{$size}'";
+                $debug_info[] = "  -> INVALID: Women's with '{$size}'";
+            } elseif (($gender_lower === 'kids' || $gender_lower === 'kid' || $gender_lower === 'children' || $gender_lower === 'child') && !preg_match('/^kids-/', $size_lower)) {
+                $should_delete = true;
+                $debug_info[] = "  -> INVALID: Kids with '{$size}'";
             }
             
             if ($should_delete) {

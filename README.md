@@ -5,9 +5,9 @@ A WordPress plugin for WooCommerce that displays conditional variation dropdowns
 ## Features
 
 - Shows size dropdown only after gender is selected
-- Filters size options based on selected gender (Male/Female/Children)
+- Filters size options based on selected gender (Unisex/Men's/Women's/Kids)
 - Prevents invalid variation combinations
-- Clean customer-facing labels (displays "S" instead of "male-s")
+- Clean customer-facing labels (displays "XS" instead of "unisex-xs")
 - Works with WooCommerce HPOS
 - Increases variation generation limit to 500
 
@@ -23,44 +23,63 @@ A WordPress plugin for WooCommerce that displays conditional variation dropdowns
 
 Go to **Products → Attributes** and create a "Size" attribute with terms like:
 
-**Male sizes:**
-- Name: `S`, Slug: `male-s`
-- Name: `M`, Slug: `male-m`
-- Name: `L`, Slug: `male-l`
-- Name: `XL`, Slug: `male-xl`
-- Name: `XXL`, Slug: `male-xxl`
-- Name: `3XL`, Slug: `male-3xl`
-- Name: `5XL`, Slug: `male-5xl`
+**Unisex sizes:**
+- Name: `XS`, Slug: `unisex-xs`
+- Name: `S`, Slug: `unisex-s`
+- Name: `M`, Slug: `unisex-m`
+- Name: `L`, Slug: `unisex-l`
+- Name: `XL`, Slug: `unisex-xl`
+- Name: `XXL`, Slug: `unisex-xxl`
+- Name: `3XL`, Slug: `unisex-3xl`
+- Name: `4XL`, Slug: `unisex-4xl`
+- Name: `5XL`, Slug: `unisex-5xl`
 
-**Female sizes:**
-- Name: `6`, Slug: `female-6`
-- Name: `8`, Slug: `female-8`
-- Name: `10`, Slug: `female-10`
-- etc. (up to 26)
+**Men's sizes:**
+- Name: `XS`, Slug: `mens-xs`
+- Name: `S`, Slug: `mens-s`
+- Name: `M`, Slug: `mens-m`
+- Name: `L`, Slug: `mens-l`
+- Name: `XL`, Slug: `mens-xl`
+- Name: `XXL`, Slug: `mens-xxl`
+- Name: `3XL`, Slug: `mens-3xl`
+- Name: `4XL`, Slug: `mens-4xl`
+- Name: `5XL`, Slug: `mens-5xl`
 
-**Children sizes:**
-- Name: `4`, Slug: `child-4`
-- Name: `6`, Slug: `child-6`
-- Name: `8`, Slug: `child-8`
-- etc. (up to 16)
+**Women's sizes:**
+- Name: `XS`, Slug: `womens-xs`
+- Name: `S`, Slug: `womens-s`
+- Name: `M`, Slug: `womens-m`
+- Name: `L`, Slug: `womens-l`
+- Name: `XL`, Slug: `womens-xl`
+- Name: `XXL`, Slug: `womens-xxl`
+- Name: `3XL`, Slug: `womens-3xl`
+- Name: `4XL`, Slug: `womens-4xl`
+- Name: `5XL`, Slug: `womens-5xl`
+
+**Kids sizes:**
+- Name: `8`, Slug: `kids-8`
+- Name: `10`, Slug: `kids-10`
+- Name: `12`, Slug: `kids-12`
+- Name: `14`, Slug: `kids-14`
 
 ### 2. Create Gender Attribute
 
 Create a "Gender" attribute with terms:
-- Male
-- Female
-- Children (or Child)
+- Unisex
+- Mens (display as "Men's")
+- Womens (display as "Women's")
+- Kids
 
 ### 3. Configure Products
 
 For each variable product:
-1. Add **Gender** attribute - select: Male, Female, Children
+1. Add **Gender** attribute - select the gender options this product offers (e.g., Unisex + Kids, or Mens + Womens + Kids)
 2. Add **Size** attribute - select only the sizes this product offers
 3. Check "Used for variations" for both attributes
 4. Save attributes
 5. Go to Variations tab
 6. Select "Create variations from all attributes"
-7. Generate variations (click multiple times if needed - generates 50 at a time)
+7. Generate variations (click multiple times if needed - generates 100 at a time)
 8. Invalid combinations will be automatically cleaned up
 9. Set prices/stock/images for valid variations
 
@@ -70,9 +89,10 @@ For each variable product:
 1. Customer sees only the **Gender** dropdown initially
 2. After selecting a gender, the **Size** dropdown appears
 3. Size dropdown shows only relevant sizes:
-   - Male → S, M, L, XL, XXL, 3XL, 5XL
-   - Female → 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26
-   - Children → 4, 6, 8, 10, 12, 14, 16
+   - Unisex → XS, S, M, L, XL, XXL, 3XL, 4XL, 5XL
+   - Men's → XS, S, M, L, XL, XXL, 3XL, 4XL, 5XL
+   - Women's → XS, S, M, L, XL, XXL, 3XL, 4XL, 5XL
+   - Kids → 8, 10, 12, 14
 4. Customer selects size → Add to Cart button enables
 5. Customer can change gender - size selection resets
 
@@ -118,7 +138,7 @@ conditional-woo-variations/
 
 ### Invalid variations created
 - The plugin includes a cleanup function to remove invalid combinations
-- Manually delete variations that don't match (e.g., Male + female-6)
+- Manually delete variations that don't match (e.g., Men's + womens-xs)
 
 ### Add to Cart stays disabled
 - Ensure at least one valid variation exists for the Gender + Size combination
@@ -133,6 +153,13 @@ GPL v2 or later
 Built for conditional WooCommerce variations with gender-specific sizing.
 
 ## Changelog
+
+### 1.1.0
+- Added support for four gender options: Unisex, Men's, Women's, and Kids
+- All adult sizes (Unisex/Men's/Women's): XS - 5XL
+- Kids sizes: 8, 10, 12, 14
+- Updated validation logic for new gender structure
+- Products can use any combination of genders (e.g., just Unisex, or Men's + Women's)
 
 ### 1.0.5
 - Initial release
